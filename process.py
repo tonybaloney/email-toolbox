@@ -12,6 +12,9 @@ for target in config["folders"]:
         folder = json.load(cache)
         for item in folder:
             item["folder"] = target
+            if target == "Trash":
+                item['outcome'] = "delete"
+            del item['text_body']
     items.extend(folder)
 
 df = pd.DataFrame(items)

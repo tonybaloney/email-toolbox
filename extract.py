@@ -1,5 +1,7 @@
 from exchangelib import Account, ServiceAccount, Configuration, DELEGATE, EWSTimeZone
 from exchangelib.items import Message
+import exchangelib.queryset
+
 import yaml
 from pprint import pprint
 import json
@@ -7,7 +9,20 @@ import requests
 
 with open(".config.yml", "r") as config_f:
     config = yaml.load(config_f)
+
 apim_key = config["apim_key"]
+
+# fields of an email to serialise
+fields = (
+    "message_id",
+    "text_body",
+    "subject",
+    "size",
+    "categories",
+    "importance",
+    "reminder_is_set",
+    "has_attachments"
+)
 
 
 def connect(config):
@@ -55,7 +70,8 @@ def get_entities(cache):
     documents = []
     id = 1
     for item in cache:
-        documents.append({"language": "en", "id": id, "text": item["text_body"]})
+        documents.append({"language": "en", "id": id, "text": item["text_body"][:1000]})
+        item['doc'] = id
         id += 1
     request = {"documents": documents}
     headers = {
@@ -68,10 +84,13 @@ def get_entities(cache):
         headers=headers,
     )
     result = response.json()
-    id = 0
+    for document in result["documents"]:
+        match = [item for item in cache if item['doc'] == int(document['id'])]
+        if match:
+            match[0]["keyPhrases"] = document["keyPhrases"]
     for item in cache:
-        item["keyPhrases"] = result["documents"][id]["keyPhrases"]
-        id += 1
+        if 'keyPhrases' not in item:
+            item['keyPhrases'] = []
     return cache
 
 
@@ -83,7 +102,6 @@ def normalise(cache):
     for phrase in cache[0]["keyPhrases"]:
         if sum([1 for item in cache if phrase in item["keyPhrases"]]) >= size:
             remove.append(phrase)
-    print(remove)
     for item in cache:
         item["keyPhrases"] = [
             phrase for phrase in item["keyPhrases"] if phrase not in remove
@@ -92,24 +110,31 @@ def normalise(cache):
 
 
 account = connect(config)
-fields = (
-    "text_body",
-    "subject",
-    "size",
-    "categories",
-    "importance",
-    "in_reply_to",
-    "reminder_is_set",
-    "has_attachments",
-)
+sent = account.sent
+
+
+def decision(cache):
+    for item in cache:
+        try:
+            reply = sent.get(in_reply_to=item['message_id'])
+            cat = "reply"
+        except exchangelib.queryset.DoesNotExist:
+            cat = "read"
+        item['outcome'] = cat
+    return cache
+
 
 for target in config["folders"]:
-    folder = account.root.get_folder_by_name(target)
+    if target == "Trash":
+        folder = account.trash
+    else:
+        folder = account.root.get_folder_by_name(target)
     # .inbox.all().order_by('-datetime_received')[:100]
     items = folder.all().only(*fields)
-    cache = [simple(item, fields) for item in items[:5] if isinstance(item, Message)]
+    cache = [simple(item, fields) for item in items[:50] if isinstance(item, Message)]
     cache = get_entities(cache)
     cache = normalise(cache)
+    cache = decision(cache)
 
     with open("inbox.{0}.cache".format(target), "w") as out:
         json.dump(cache, out)
