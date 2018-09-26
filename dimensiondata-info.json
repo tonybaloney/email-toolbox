@@ -1,0 +1,31 @@
+{
+    "source_code": {
+        "backlog": "",
+        "demo": "",
+        "documentation": "",
+        "scm": "git@scm.dimensiondata.com:anthony-shaw1/email-toolbox.git",
+        "testSystem": "",
+        "userVoice": "",
+        "discussion": ""
+    },
+    "organization": {},
+    "project_name": "Gist",
+    "description": "Metadata extract tool written in Python with an Azure ML Studio  template for training and making class-based recommendation on metadata attribute. This metadata extraction is configured for Microsoft Exchange on O365 or on-premise",
+    "version": "1.0.0",
+    "development_status": "concept",
+    "primary_contact": "anthony.shaw@dimensiondata.com",
+    "lead_developer": "Anthony Shaw <anthony.shaw@dimensiondata.com",
+    "license": "internal-only",
+    "open_to_contribution": "yes",
+    "confidentiality": "Restricted Confidential - Internal use only",
+    "type": "Automation",
+    "technology": {
+        "programming_languages": [
+            "Azure",
+            "Machine Learning",
+            "Python",
+            "Microsoft Exchange"
+        ],
+        "platform": []
+    }
+}
